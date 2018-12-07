@@ -5,12 +5,17 @@ from keras import activations, initializers, regularizers, constraints
 
 class MoS(Layer):
     """
-        Mixture of softmaxes layer implementation.
+        Mixture of softmaxes (MoS) implementation.
 
-        Args:
-            - units: dimension of output
-            - n_softmax: number of softmaxes we use in the mixture.
+        The mixture of softmaxes is described on:
+            https://arxiv.org/abs/1711.03953
+            by Zhilin Yang, Zihang Dai, Ruslan Salakhutdinov, William W. Cohen.
+
+        The official implementation -- in pyTorch -- can be found in:
+            https://github.com/zihangdai/mos
+
     """
+
     def __init__(self,
                  units,
                  n_softmaxes,
@@ -39,7 +44,21 @@ class MoS(Layer):
                  expert_bias_constraint=None,
                  mixture_bias_constraint=None,
                  **kwargs):
+        """ Initialize the parameters for a MoS Layer
 
+        Args:
+         units: number classes
+         n_softmaxes: number of softmaxes to use in the mixture.
+         projection_activation: activation for the projections step.
+         expert_activation: changing this from the default value changes this
+            layer from mixture of softmaxes to a mixture of experts. Change it
+            at your peril.
+         mixture_activation: activation for the mixture step. Changing this
+            affects the mixture weights. For example, mixture weights will not
+            sum to 1 if 'Relu' is used.
+
+        Other arguments are self-explanatory.
+        """
         if 'input_shape' not in kwargs and 'input_dim' in kwargs:
             kwargs['input_shape'] = (kwargs.pop('input_dim'),)
         super(MoS, self).__init__(**kwargs)
@@ -154,8 +173,13 @@ class MoS(Layer):
         self.built = True
 
     def call(self, inputs):
-        """
-            Add something here
+        """ Run one step of MoS.
+
+        Args:
+            inputs: input Tensor, must be 2-D, `[batch, input_size]`
+
+        Returns:
+            A 2-D tuple of size `[batch, self.units]`
         """
         projection = K.dot(inputs, self.projection_kernel)
         if self.use_projection_bias:
